@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 import requests
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import sys
 
 import json
@@ -42,6 +42,32 @@ def save_to_json(lang_data):
         #f.write(json_str)
         json.dump(lang_data, f, indent=4)
 
+def plot_data(username: str, lang_data: dict, min_pct: float=0.015, path:str="lang_chart.png"):
+
+    if not lang_data:
+        print("No language data found.")
+        return
+
+    langs = lang_data.items()
+    total_bytes = sum(lang_data.values())
+
+    # Split into major and minor languages
+    major = []
+    minor_total = 0
+    for lang, count in langs:
+        if count / total_bytes >= min_pct:
+            major.append((lang, count))
+        else:
+            minor_total += count
+
+    if minor_total > 0:
+        major.append(("Other", minor_total))
+
+    sizes = [count for _, count in major]
+
+    chart = plt.pie(sizes)
+    plt.show()
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -51,5 +77,6 @@ if __name__ == "__main__":
     username = sys.argv[1]
     token = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else None
 
-    lang_data = (fetch_langs(username, token))
-    save_to_json(lang_data)
+    top_langs = (fetch_langs(username, token))
+    save_to_json(top_langs)
+    plot_data(username, top_langs)
