@@ -119,20 +119,45 @@ def create_donut_chart(username: str, lang_data: dict, min_pct: float, dh_width:
     return fig, ax
 
 
-def create_bar_chart(username: str, lang_data: dict, min_pct: float):
+def create_vertical_bar_chart(username: str, lang_data: dict, min_pct: float):
     data = process_lang_data(lang_data, min_pct)
     total = sum(d["size"] for d in data)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.bar([d["label"] for d in data], [d["size"] for d in data], color=[d["color"] for d in data])
 
-    ax.set_ylabel("Bytes of Code")
+    bars = ax.bar([d["label"] for d in data],
+                  [d["size"] / 1_000 for d in data],  # Y-axis in MB
+                  color=[d["color"] for d in data])
+
+    ax.set_ylabel("Kilobytes")  # left axis label
     ax.set_title(f"{username}'s Most Used Languages")
-    ax.legend(
-        [f"{d['label']} - {d['size'] / total:.1%}" for d in data],
-        loc="center left",
-        bbox_to_anchor=(1, 0.5)
-    )
+
+    # Legend showing percentage
+    ax.legend(bars, [f"{d['label']} - {d['size'] / total:.1%}" for d in data],
+              loc="center left", bbox_to_anchor=(1, 0.5))
+
+    return fig, ax
+
+def create_horizontal_bar_chart(username: str, lang_data: dict, min_pct: float):
+    data = process_lang_data(lang_data, min_pct)
+    total = sum(d["size"] for d in data)
+
+    fig, ax = plt.subplots(figsize=(8, max(2, len(data)*0.5)))  # dynamic height
+
+    bars = ax.barh([d["label"] for d in data],
+                   [d["size"]/1_000 for d in data],  # X-axis in KB
+                   color=[d["color"] for d in data])
+
+    ax.set_xlabel("Kilobytes")  # X-axis label
+    ax.set_title(f"{username}'s Most Used Languages")
+
+    # Legend showing percentage
+    ax.legend(bars, [f"{d['label']} - {d['size']/total:.1%}" for d in data],
+              loc="center left", bbox_to_anchor=(1, 0.5))
+
+    # Optionally invert Y-axis for top-to-bottom ranking
+    ax.invert_yaxis()
+
     return fig, ax
 
 def create_stacked_chart(username: str, lang_data: dict, min_pct: float):
@@ -199,8 +224,10 @@ def create_chart(type: str, username: str, lang_data: dict, minimum_percentage: 
         fig, ax = create_pie_chart(username, lang_data, minimum_percentage)
     elif type == "donut":
         fig, ax = create_donut_chart(username, lang_data, minimum_percentage, dh_width)
-    elif type == "bar":
-        fig, ax = create_bar_chart(username, lang_data, minimum_percentage)
+    elif type == "vbar":
+        fig, ax = create_vertical_bar_chart(username, lang_data, minimum_percentage)
+    elif type == "hbar":
+        fig, ax = create_horizontal_bar_chart(username, lang_data, minimum_percentage)
     elif type == "stacked":
         fig, ax = create_stacked_chart(username, lang_data, minimum_percentage)
     else:

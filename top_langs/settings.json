@@ -4,10 +4,10 @@
 
   "minimum_percentage": 0.015,
 
-  "use_data": "old",
+  "use_data": "new",
   "json_save_path": "output.json",
 
-  "chart_type": "stacked",
+  "chart_type": "donut",
   "donut_hole_width": 0.3,
 
 
