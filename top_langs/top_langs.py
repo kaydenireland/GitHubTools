@@ -20,7 +20,7 @@ def fetch_new_langs(username: str, token : str=None):
 
         repos = requests.get(repos_url, headers=headers).json()
         if isinstance(repos, dict) and repos.get("message"):
-            raise Exception(f"Error fetching repos: {repos['message']}") # TODO exception handling
+            raise Exception(f"Error fetching repos: {repos['message']}")
         if not repos:
             break # if there are no remaining repos
 
@@ -50,7 +50,7 @@ def load_from_json(path):
         return {lang: int(count) for lang, count in data.items()}
     return {}
 
-def plot_data(username: str, lang_data: dict, min_pct: float=0.015, path:str="lang_chart.png"):
+def create_pie_chart(username: str, lang_data: dict, min_pct: float=0.015):
 
     if not lang_data:
         print("No language data found.")
@@ -83,37 +83,65 @@ def plot_data(username: str, lang_data: dict, min_pct: float=0.015, path:str="la
 
     # TODO chart themes, themes.json
 
-    plt.figure(figsize=(6, 6))
-    wedges, _ = plt.pie(sizes, colors=colors)
-    plt.legend(
+    fig, ax = plt.subplots(figsize=(8, 6))
+    wedges, _ = ax.pie(sizes, colors=colors)
+    ax.legend(
         wedges,
         percentages,
         loc="center left",
         bbox_to_anchor=(1, 0, 0.5, 1)
     )
 
-    plt.title(f"{username}'s Most Used Languages")
-    plt.show()
-    # TODO save chart to file
+    ax.set_title(f"{username}'s Most Used Languages")
+    return fig, ax
+
+def save_chart_to_file(fig, path: str, dpi: int = 300):
+    fig.savefig(path, bbox_inches="tight", dpi=dpi)
+    plt.close(fig)
+    print(f"[LOG] Chart Saved to {path}")
+
+def show_chart(fig):
+    # display chart
+    fig.show()
 
 
 if __name__ == "__main__":
+
+    print("[LOG] Starting Script. See README for Settings Help")
+
     with open("settings.json", 'r') as f:
         settings = json.load(f)
+
+    print("[LOG] Reading Settings")
 
     username = settings["username"]
     token = settings["token"]
 
-    save_path = settings["save_path"]
+    chart_save_path = settings["json_save_path"]
     lang_data = defaultdict(int)
 
+    print("[LOG] Fetching Language Data")
+
     if settings["use_data"] == "new":
+        print("[LOG] Getting New Data")
         lang_data = fetch_new_langs(username,token)
     elif settings["use_data"] == "old":
-        lang_data = load_from_json(save_path)
+        print("[LOG] Using Old Data")
+        lang_data = load_from_json(chart_save_path)
     else:
-        raise ValueError("settings.json use_data must be 'new' or 'old'")
+        print("[LOG/ERROR] Invalid Data Selection (use_data)")
 
-    print(lang_data)
+    print("[LOG] Creating Chart")
+    minimum_percentage = settings["minimum_percentage"]
+    fig, ax = create_pie_chart(username, lang_data, minimum_percentage)
 
-    plot_data(username, lang_data, path=save_path)
+    output_option = settings["output_option"]
+    if output_option == "save":
+        print("[LOG] Saving Chart")
+        image_save_path = settings["image_save_path"]
+        save_chart_to_file(fig, image_save_path)
+    elif output_option == "show":
+        print("[LOG] Showing Chart")
+        show_chart(fig)
+    else:
+        print("[LOG/ERROR] Invalid Output Type (output_option)")

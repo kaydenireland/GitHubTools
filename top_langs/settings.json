@@ -1,0 +1,14 @@
+{
+  "username": "kaydenireland",
+  "token": "",
+
+  "minimum_percentage": 0.015,
+
+  "use_data": "new",
+  "json_save_path": "output.json",
+
+  "output_option": "save",
+  "image_save_path": "chart.png",
+
+  "theme": "default"
+}
