@@ -4,10 +4,13 @@
 
   "minimum_percentage": 0.015,
 
-  "use_data": "new",
+  "use_data": "old",
   "json_save_path": "output.json",
 
   "chart_type": "pie",
+  "donut_hole_width": 0.3,
+
+
   "output_option": "save",
   "image_save_path": "chart.png",
 

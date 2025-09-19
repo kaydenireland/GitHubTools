@@ -1,10 +1,8 @@
 from collections import defaultdict
-
 import requests
 import matplotlib.pyplot as plt
-import sys
-
 import json
+import sys
 
 
 # ------------------------
@@ -35,15 +33,13 @@ def fetch_new_langs(username: str, token : str=None):
 
     return dict(sorted(lang_totals.items(), key=lambda x: x[1], reverse=True))
 
-def save_to_json(lang_data):
+def save_to_json(lang_data: dict):
     file_name = "output.json"
 
-    #json_str = json.dumps(lang_data, indent=4)
     with open(file_name, 'w') as f:
-        #f.write(json_str)
         json.dump(lang_data, f, indent=4)
 
-def load_from_json(path):
+def load_from_json(path: str):
     if path:
         with open(path, 'r') as f:
             data = json.load(f)
@@ -94,7 +90,7 @@ def process_lang_data(lang_data: dict, min_pct: float = 0.015, color_file="lang_
 # Chart Renderers
 # ------------------------
 
-def create_pie_chart(username: str, lang_data: dict, min_pct):
+def create_pie_chart(username: str, lang_data: dict, min_pct: float):
     processed = process_lang_data(lang_data, min_pct)
 
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -111,8 +107,40 @@ def create_pie_chart(username: str, lang_data: dict, min_pct):
     fig.tight_layout()
     return fig, ax
 
+def create_donut_chart(username: str, lang_data: dict, min_pct: float, dh_width: float):
+    processed = process_lang_data(lang_data, min_pct)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    wedges, _ = ax.pie(
+        processed["sizes"],
+        colors=processed["colors"],
+        wedgeprops=dict(width=dh_width)  # donut hole
+    ) # TODO setting for donut hole width
+
+    ax.legend(
+        wedges,
+        processed["percentages"],
+        loc="center left",
+        bbox_to_anchor=(1, 0.5)
+    )
+    ax.set_title(f"{username}'s Most Used Languages")
+    ax.axis("equal")
+    fig.tight_layout()
+    return fig, ax
+
+
+def create_bar_chart(username: str, lang_data: dict, min_pct: float):
+    processed = process_lang_data(lang_data, min_pct)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.barh(processed["labels"], processed["sizes"], color=processed["colors"])
+    ax.set_xlabel("Bytes of Code")
+    ax.set_title(f"{username}'s Most Used Languages")
+    fig.tight_layout()
+    return fig, ax
+
 # ------------------------
-# Utilites
+# Save/Show
 # ------------------------
 
 def save_chart_to_file(fig, path: str, dpi: int = 300):
@@ -126,46 +154,77 @@ def show_chart(fig):
 
 
 # ------------------------
-# Main
+# Factory
 # ------------------------
 
-if __name__ == "__main__":
-
-    print("[LOG] Starting Script. See README for Settings Help")
-
-    with open("settings.json", 'r') as f:
-        settings = json.load(f)
-
-    print("[LOG] Reading Settings")
-
-    username = settings["username"]
-    token = settings["token"]
-
-    chart_save_path = settings["json_save_path"]
+def get_lang_data(use_data: str, username: str, token: str, chart_save_path: str):
     lang_data = defaultdict(int)
 
-    print("[LOG] Fetching Language Data")
-
-    if settings["use_data"] == "new":
+    if use_data == "new":
         print("[LOG] Getting New Data")
-        lang_data = fetch_new_langs(username,token)
-    elif settings["use_data"] == "old":
+        lang_data = fetch_new_langs(username, token)
+    elif use_data == "old":
         print("[LOG] Using Old Data")
         lang_data = load_from_json(chart_save_path)
     else:
         print("[LOG/ERROR] Invalid Data Selection (use_data)")
+    return lang_data
 
-    print("[LOG] Creating Chart")
-    minimum_percentage = settings["minimum_percentage"]
-    fig, ax = create_pie_chart(username, lang_data, minimum_percentage)
+def create_chart(type: str, username: str, lang_data: dict, minimum_percentage: float, dh_width: float):
+    if type == "pie":
+        fig, ax = create_pie_chart(username, lang_data, minimum_percentage)
+    elif type == "donut":
+        fig, ax = create_donut_chart(username, lang_data, minimum_percentage, dh_width)
+    elif type == "bar":
+        fig, ax = create_bar_chart(username, lang_data, minimum_percentage)
+    else:
+        print("[LOG/ERROR] Invalid Chart Type (chart_type)")
+        return
+    return fig, ax
 
-    output_option = settings["output_option"]
+def output_chart(output_option: str, image_save_path: str, fig):
     if output_option == "save":
         print("[LOG] Saving Chart")
-        image_save_path = settings["image_save_path"]
         save_chart_to_file(fig, image_save_path)
     elif output_option == "show":
         print("[LOG] Showing Chart")
         show_chart(fig)
     else:
         print("[LOG/ERROR] Invalid Output Type (output_option)")
+
+def run():
+    print("[LOG] Starting Script. See README for Settings Help")
+    with open("settings.json", 'r') as f:
+        settings = json.load(f)
+
+    '''
+    Gather All Settings
+    '''
+    print("[LOG] Reading Settings")
+    username_setting = settings["username"]
+    token_setting = settings["token"]
+    chart_save_path_setting = settings["json_save_path"]
+    use_data_setting = settings["use_data"]
+    minimum_percentage_setting = settings["minimum_percentage"]
+    chart_type_setting = settings["chart_type"]
+    donut_hole_width_setting = settings["donut_hole_width"]
+    output_option_setting = settings["output_option"]
+    image_save_path_setting = settings["image_save_path"]
+
+    print("[LOG] Fetching Language Data")
+    lang_data = get_lang_data(use_data_setting, username_setting, token_setting, chart_save_path_setting)
+
+    print("[LOG] Creating Chart")
+    fig, ax = create_chart(chart_type_setting, username_setting, lang_data, minimum_percentage_setting, donut_hole_width_setting)
+
+    print("[LOG] Sharing Chart")
+    output_chart(output_option_setting, image_save_path_setting, fig)
+
+
+# ------------------------
+# Main
+# ------------------------
+
+if __name__ == "__main__":
+    run()
+# TODO better documentation, comment entire program
