@@ -7,7 +7,7 @@
   "use_data": "old",
   "json_save_path": "output.json",
 
-  "chart_type": "pie",
+  "chart_type": "stacked",
   "donut_hole_width": 0.3,
 
 

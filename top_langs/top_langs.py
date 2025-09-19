@@ -53,90 +53,114 @@ def load_from_json(path: str):
 
 def process_lang_data(lang_data: dict, min_pct: float = 0.015, color_file="lang_colors.json"):
     if not lang_data:
-        raise ValueError("No language data found.")
+        return []
 
     total_bytes = sum(lang_data.values())
     major = []
     minor_total = 0
-    colors = []
 
     with open(color_file, "r") as f:
-        color_data = json.load(f)
+        color_map = json.load(f)
 
     for lang, count in lang_data.items():
         if count / total_bytes >= min_pct:
-            major.append((lang, count))
-            colors.append(color_data.get(lang, {}).get("color", "#999999"))
+            major.append({
+                "label": lang,
+                "size": count,
+                "color": color_map.get(lang, {}).get("color", "#CCCCCC")
+            })
         else:
             minor_total += count
 
     if minor_total > 0:
-        major.append(("Other", minor_total))
-        colors.append("#000000")
+        major.append({
+            "label": "Other",
+            "size": minor_total,
+            "color": "#000000"
+        })
 
-    sizes = [count for _, count in major]
-    labels = [lang for lang, _ in major]
-    percentages = [f"{lang} - {count / total_bytes:.1%}" for lang, count in major]
-
-    return {
-        "sizes": sizes,
-        "labels": labels,
-        "colors": colors,
-        "percentages": percentages,
-        "total": total_bytes,
-    }
+    major.sort(key=lambda x: x["size"], reverse=True)
+    return major
 
 # ------------------------
 # Chart Renderers
 # ------------------------
 
 def create_pie_chart(username: str, lang_data: dict, min_pct: float):
-    processed = process_lang_data(lang_data, min_pct)
+    data = process_lang_data(lang_data, min_pct)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    wedges, _ = ax.pie(processed["sizes"], colors=processed["colors"])
+    total = sum(d["size"] for d in data)
 
+    fig, ax = plt.subplots(figsize=(6, 6))
+    wedges, _ = ax.pie([d["size"] for d in data], colors=[d["color"] for d in data])
     ax.legend(
         wedges,
-        processed["percentages"],
+        [f"{d['label']} - {d['size'] / total:.1%}" for d in data],
         loc="center left",
-        bbox_to_anchor=(1, 0.5)
+        bbox_to_anchor=(1, 0, 0.5, 1)
     )
     ax.set_title(f"{username}'s Most Used Languages")
-    ax.axis("equal")
-    fig.tight_layout()
     return fig, ax
 
 def create_donut_chart(username: str, lang_data: dict, min_pct: float, dh_width: float):
-    processed = process_lang_data(lang_data, min_pct)
+    data = process_lang_data(lang_data, min_pct)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    wedges, _ = ax.pie(
-        processed["sizes"],
-        colors=processed["colors"],
-        wedgeprops=dict(width=dh_width)  # donut hole
-    ) # TODO setting for donut hole width
+    total = sum(d["size"] for d in data)
 
+    fig, ax = plt.subplots(figsize=(6, 6))
+    wedges, _ = ax.pie([d["size"] for d in data], colors=[d["color"] for d in data], wedgeprops=dict(width=0.4))
     ax.legend(
         wedges,
-        processed["percentages"],
+        [f"{d['label']} - {d['size'] / total:.1%}" for d in data],
         loc="center left",
-        bbox_to_anchor=(1, 0.5)
+        bbox_to_anchor=(1, 0, 0.5, 1)
     )
-    ax.set_title(f"{username}'s Most Used Languages")
-    ax.axis("equal")
-    fig.tight_layout()
+    ax.set_title(f"{username}'s Most Used Languages (Donut)")
     return fig, ax
 
 
 def create_bar_chart(username: str, lang_data: dict, min_pct: float):
-    processed = process_lang_data(lang_data, min_pct)
+    data = process_lang_data(lang_data, min_pct)
+    total = sum(d["size"] for d in data)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.barh(processed["labels"], processed["sizes"], color=processed["colors"])
-    ax.set_xlabel("Bytes of Code")
+    ax.bar([d["label"] for d in data], [d["size"] for d in data], color=[d["color"] for d in data])
+
+    ax.set_ylabel("Bytes of Code")
     ax.set_title(f"{username}'s Most Used Languages")
-    fig.tight_layout()
+    ax.legend(
+        [f"{d['label']} - {d['size'] / total:.1%}" for d in data],
+        loc="center left",
+        bbox_to_anchor=(1, 0.5)
+    )
+    return fig, ax
+
+def create_stacked_chart(username: str, lang_data: dict, min_pct: float):
+    data = process_lang_data(lang_data, min_pct)
+    total = sum(d["size"] for d in data)
+
+    fig, ax = plt.subplots(figsize=(8, 1.5))  # smaller height for a sleek bar
+    left = 0
+    for d in data:
+        width = d["size"] / total
+        ax.barh(0, width, left=left, color=d["color"], edgecolor=d["color"], height=1.0)
+        left += width
+
+    # Remove axes
+    ax.set_xlim(0, 1)
+    ax.set_yticks([])
+    ax.set_xticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    # Legend
+    ax.legend([f"{d['label']} - {d['size'] / total:.1%}" for d in data],
+              loc="center left", bbox_to_anchor=(1, 0.5))
+
+    ax.set_xlim(0, 1)
+    ax.set_yticks([])
+    ax.set_xticks([])
+    ax.set_title(f"{username}'s Most Used Languages")
     return fig, ax
 
 # ------------------------
@@ -177,6 +201,8 @@ def create_chart(type: str, username: str, lang_data: dict, minimum_percentage: 
         fig, ax = create_donut_chart(username, lang_data, minimum_percentage, dh_width)
     elif type == "bar":
         fig, ax = create_bar_chart(username, lang_data, minimum_percentage)
+    elif type == "stacked":
+        fig, ax = create_stacked_chart(username, lang_data, minimum_percentage)
     else:
         print("[LOG/ERROR] Invalid Chart Type (chart_type)")
         return
