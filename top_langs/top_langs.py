@@ -1,4 +1,3 @@
-
 from collections import defaultdict
 
 import requests
@@ -7,8 +6,10 @@ import sys
 
 import json
 
-from matplotlib.font_manager import json_dump
 
+# ------------------------
+# Data Gathering
+# ------------------------
 
 def fetch_new_langs(username: str, token : str=None):
     headers = {"Authorization": f"token {token}"} if token else {}
@@ -50,27 +51,26 @@ def load_from_json(path):
         return {lang: int(count) for lang, count in data.items()}
     return {}
 
-def create_pie_chart(username: str, lang_data: dict, min_pct: float=0.015):
+# ------------------------
+# Centralized Processing
+# ------------------------
 
+def process_lang_data(lang_data: dict, min_pct: float = 0.015, color_file="lang_colors.json"):
     if not lang_data:
-        print("No language data found.")
-        return
+        raise ValueError("No language data found.")
 
-    langs = lang_data.items()
     total_bytes = sum(lang_data.values())
-
-    # Split into major and minor languages
     major = []
     minor_total = 0
     colors = []
 
-    with open("lang_colors.json", "r") as f:
-        data = json.load(f)
+    with open(color_file, "r") as f:
+        color_data = json.load(f)
 
-    for lang, count in langs:
+    for lang, count in lang_data.items():
         if count / total_bytes >= min_pct:
             major.append((lang, count))
-            colors.append(data[lang]["color"])
+            colors.append(color_data.get(lang, {}).get("color", "#999999"))
         else:
             minor_total += count
 
@@ -79,21 +79,41 @@ def create_pie_chart(username: str, lang_data: dict, min_pct: float=0.015):
         colors.append("#000000")
 
     sizes = [count for _, count in major]
-    percentages = [f"{label} - {size / total_bytes:.1%}" for label, size in major]
+    labels = [lang for lang, _ in major]
+    percentages = [f"{lang} - {count / total_bytes:.1%}" for lang, count in major]
 
-    # TODO chart themes, themes.json
+    return {
+        "sizes": sizes,
+        "labels": labels,
+        "colors": colors,
+        "percentages": percentages,
+        "total": total_bytes,
+    }
+
+# ------------------------
+# Chart Renderers
+# ------------------------
+
+def create_pie_chart(username: str, lang_data: dict, min_pct):
+    processed = process_lang_data(lang_data, min_pct)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    wedges, _ = ax.pie(sizes, colors=colors)
+    wedges, _ = ax.pie(processed["sizes"], colors=processed["colors"])
+
     ax.legend(
         wedges,
-        percentages,
+        processed["percentages"],
         loc="center left",
-        bbox_to_anchor=(1, 0, 0.5, 1)
+        bbox_to_anchor=(1, 0.5)
     )
-
     ax.set_title(f"{username}'s Most Used Languages")
+    ax.axis("equal")
+    fig.tight_layout()
     return fig, ax
+
+# ------------------------
+# Utilites
+# ------------------------
 
 def save_chart_to_file(fig, path: str, dpi: int = 300):
     fig.savefig(path, bbox_inches="tight", dpi=dpi)
@@ -104,6 +124,10 @@ def show_chart(fig):
     # display chart
     fig.show()
 
+
+# ------------------------
+# Main
+# ------------------------
 
 if __name__ == "__main__":
 
