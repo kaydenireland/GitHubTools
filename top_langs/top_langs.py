@@ -115,7 +115,7 @@ def create_donut_chart(username: str, lang_data: dict, min_pct: float, dh_width:
         loc="center left",
         bbox_to_anchor=(1, 0, 0.5, 1)
     )
-    ax.set_title(f"{username}'s Most Used Languages (Donut)")
+    ax.set_title(f"{username}'s Most Used Languages")
     return fig, ax
 
 
