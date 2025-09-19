@@ -1,3 +1,4 @@
+
 from collections import defaultdict
 
 import requests
@@ -9,7 +10,7 @@ import json
 from matplotlib.font_manager import json_dump
 
 
-def fetch_langs(username: str, token : str=None):
+def fetch_new_langs(username: str, token : str=None):
     headers = {"Authorization": f"token {token}"} if token else {}
     lang_totals = defaultdict(int)
     page = 1
@@ -19,7 +20,7 @@ def fetch_langs(username: str, token : str=None):
 
         repos = requests.get(repos_url, headers=headers).json()
         if isinstance(repos, dict) and repos.get("message"):
-            raise Exception(f"Error fetching repos: {repos['message']}")
+            raise Exception(f"Error fetching repos: {repos['message']}") # TODO exception handling
         if not repos:
             break # if there are no remaining repos
 
@@ -33,7 +34,6 @@ def fetch_langs(username: str, token : str=None):
 
     return dict(sorted(lang_totals.items(), key=lambda x: x[1], reverse=True))
 
-
 def save_to_json(lang_data):
     file_name = "output.json"
 
@@ -41,6 +41,14 @@ def save_to_json(lang_data):
     with open(file_name, 'w') as f:
         #f.write(json_str)
         json.dump(lang_data, f, indent=4)
+
+def load_from_json(path):
+    if path:
+        with open(path, 'r') as f:
+            data = json.load(f)
+        # force counts to ints
+        return {lang: int(count) for lang, count in data.items()}
+    return {}
 
 def plot_data(username: str, lang_data: dict, min_pct: float=0.015, path:str="lang_chart.png"):
 
@@ -54,29 +62,58 @@ def plot_data(username: str, lang_data: dict, min_pct: float=0.015, path:str="la
     # Split into major and minor languages
     major = []
     minor_total = 0
+    colors = []
+
+    with open("lang_colors.json", "r") as f:
+        data = json.load(f)
+
     for lang, count in langs:
         if count / total_bytes >= min_pct:
             major.append((lang, count))
+            colors.append(data[lang]["color"])
         else:
             minor_total += count
 
     if minor_total > 0:
         major.append(("Other", minor_total))
+        colors.append("#000000")
 
     sizes = [count for _, count in major]
+    percentages = [f"{label} - {size / total_bytes:.1%}" for label, size in major]
 
-    chart = plt.pie(sizes)
+    # TODO chart themes, themes.json
+
+    plt.figure(figsize=(6, 6))
+    wedges, _ = plt.pie(sizes, colors=colors)
+    plt.legend(
+        wedges,
+        percentages,
+        loc="center left",
+        bbox_to_anchor=(1, 0, 0.5, 1)
+    )
+
+    plt.title(f"{username}'s Most Used Languages")
     plt.show()
+    # TODO save chart to file
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <github-username> [github-token]")
-        sys.exit(1)
+    with open("settings.json", 'r') as f:
+        settings = json.load(f)
 
-    username = sys.argv[1]
-    token = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else None
+    username = settings["username"]
+    token = settings["token"]
 
-    top_langs = (fetch_langs(username, token))
-    save_to_json(top_langs)
-    plot_data(username, top_langs)
+    save_path = settings["save_path"]
+    lang_data = defaultdict(int)
+
+    if settings["use_data"] == "new":
+        lang_data = fetch_new_langs(username,token)
+    elif settings["use_data"] == "old":
+        lang_data = load_from_json(save_path)
+    else:
+        raise ValueError("settings.json use_data must be 'new' or 'old'")
+
+    print(lang_data)
+
+    plot_data(username, lang_data, path=save_path)
