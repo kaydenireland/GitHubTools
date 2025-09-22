@@ -31,7 +31,9 @@ def fetch_new_langs(username: str, token : str=None):
 
         page += 1
 
-    return dict(sorted(lang_totals.items(), key=lambda x: x[1], reverse=True))
+    lang_data =  dict(sorted(lang_totals.items(), key=lambda x: x[1], reverse=True))
+    save_to_json(lang_data)
+    return lang_data
 
 def save_to_json(lang_data: dict):
     file_name = "output.json"
