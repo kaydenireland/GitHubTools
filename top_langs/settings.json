@@ -1,13 +1,13 @@
 {
-  "username": "kaydenireland",
+  "username": "",
   "token": "",
 
-  "minimum_percentage": 0.015,
+  "minimum_percentage": 0.005,
 
-  "use_data": "new",
+  "use_data": "old",
   "json_save_path": "output.json",
 
-  "chart_type": "donut",
+  "chart_type": "donue",
   "donut_hole_width": 0.3,
 
 
