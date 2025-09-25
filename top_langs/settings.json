@@ -7,7 +7,7 @@
   "use_data": "old",
   "json_save_path": "output.json",
 
-  "chart_type": "donue",
+  "chart_type": "donut",
   "donut_hole_width": 0.3,
 
 
