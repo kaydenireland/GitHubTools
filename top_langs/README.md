@@ -91,7 +91,7 @@ Horizontal Bars
 
 ## Contributing
 
-Contributions and edits always welcome!
+Contributions and suggestions always welcome!
 
 Made by Kayden Ireland
 
