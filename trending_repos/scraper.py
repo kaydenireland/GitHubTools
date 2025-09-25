@@ -3,7 +3,6 @@ import requests
 
 import json
 
-from top_langs.top_langs import save_to_json
 
 
 # ------------------------
@@ -16,6 +15,14 @@ class Repository:
         self.author = author
         self.language = language
         self.star_count = star_count
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "author": self.author,
+            "language": self.language,
+            "star_count": self.star_count
+        }
 
     def to_string(self):
         return self.name + "/" + self.author
@@ -63,9 +70,16 @@ def print_output(repos):
         print(repo.get())
 
 def write_to_file(repos):
-    with open("output.json", "w") as fw:
+    with open("output.txt", "w") as fw:
         for repo in repos:
             fw.write(f"{repo.get()} \n")
+
+def save_to_json(repos):
+    file_name = "output.json"
+
+    with open(file_name, 'w') as f:
+        json.dump([repo.to_dict() for repo in repos], f, indent=4)
+
 
 
 # ------------------------
@@ -73,13 +87,15 @@ def write_to_file(repos):
 # ------------------------
 
 def run():
-    output = "save"
+    output = "save_json"
 
     lang = input("Enter language (skip for all): ").strip().lower()
     repos = get_repos(lang)
 
     if output == "print":
         print_output(repos)
+    elif output == "save_json":
+        save_to_json(repos)
     elif output == "save_txt":
         write_to_file(repos)
 
