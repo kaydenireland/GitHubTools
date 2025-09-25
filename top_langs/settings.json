@@ -4,7 +4,7 @@
 
   "minimum_percentage": 0.005,
 
-  "use_data": "old",
+  "use_data": "new",
   "json_save_path": "output.json",
 
   "chart_type": "donut",
